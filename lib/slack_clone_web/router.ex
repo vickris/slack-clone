@@ -68,6 +68,14 @@ defmodule SlackCloneWeb.Router do
       on_mount: [{SlackCloneWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      # live "/channels", ChannelLive.Index
+
+      live "/channels", ChannelLive.Index, :index
+      live "/channels/new", ChannelLive.Index, :new
+      live "/channels/:id/edit", ChannelLive.Index, :edit
+
+      live "/channels/:id", ChannelLive.Show, :show
+      live "/channels/:id/show/edit", ChannelLive.Show, :edit
     end
   end
 
