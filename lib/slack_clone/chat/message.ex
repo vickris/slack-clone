@@ -9,6 +9,8 @@ defmodule SlackClone.Chat.Message do
     field :content, :string
     belongs_to :user, User
     belongs_to :channel, Channel
+    belongs_to :thread, __MODULE__
+    has_many :replies, __MODULE__, foreign_key: :thread_id
 
     timestamps()
   end
@@ -16,7 +18,7 @@ defmodule SlackClone.Chat.Message do
   @doc false
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:content, :user_id, :channel_id])
+    |> cast(attrs, [:content, :user_id, :channel_id, :thread_id])
     |> validate_required([:content, :user_id, :channel_id])
   end
 end

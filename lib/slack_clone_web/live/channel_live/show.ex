@@ -3,7 +3,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   alias SlackClone.Chat
   alias SlackClone.Repo
-  alias SlackCloneWeb.OnlineUsersInChannel
   alias SlackCloneWeb.Presence
 
   @impl true
