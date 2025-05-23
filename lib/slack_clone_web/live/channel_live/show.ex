@@ -36,6 +36,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:channel, channel)
         |> assign(:presences, presences)
         |> assign(:current_user, current_user)
+        |> assign(:show_thread, nil)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
         |> stream(:messages, initial_messages)
 
@@ -52,7 +53,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   @impl true
   def handle_info({:message_created, message}, socket) do
-    message_with_user = Repo.preload(message, :user)
+    message_with_user = Repo.preload(message, [:user, :replies])
 
     {:noreply, stream_insert(socket, :messages, message_with_user)}
   end
@@ -63,6 +64,12 @@ defmodule SlackCloneWeb.ChannelLive.Show do
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:channel, Chat.get_channel!(id))}
+  end
+
+  def handle_event("show_thread", %{"message-id" => message_id}, socket) do
+    # Toggle thread visibility
+    show_thread = if socket.assigns.show_thread == message_id, do: nil, else: message_id
+    {:noreply, assign(socket, :show_thread, show_thread)}
   end
 
   @impl true
