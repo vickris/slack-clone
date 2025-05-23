@@ -12,15 +12,16 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     if authorized?(current_user, channel) do
       Chat.subscribe_to_channel_messages(channel_id)
 
-      messages = Chat.list_messages(channel_id)
+      initial_messages =
+        channel_id
+        |> Chat.list_messages()
 
       socket =
         socket
         |> assign(:channel, channel)
         |> assign(:current_user, current_user)
-        |> assign(:messages, messages)
-
-      # |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
+        |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
+        |> stream(:messages, initial_messages)
 
       {:ok, socket}
     else
@@ -32,11 +33,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   def handle_info({:message_created, message}, socket) do
     message_with_user = Repo.preload(message, :user)
 
-    # update message stream
-    {:noreply,
-     update(socket, :messages, fn messages ->
-       messages ++ [message_with_user]
-     end)}
+    {:noreply, stream_insert(socket, :messages, message_with_user)}
   end
 
   @impl true

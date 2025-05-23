@@ -7,22 +7,32 @@
   
 <!-- Chat Area -->
   <div class="flex-1 flex flex-col">
-    <div class="flex-1 p-4 overflow-y-auto">
-      <%= for message <- @messages do %>
-        <div id={"message-#{message.id}"} class="mb-4">
+    <div
+      class="flex-1 p-4 overflow-y-auto"
+      id="messages"
+      phx-update="stream"
+      phx-hook="MessageScroll"
+    >
+      <%= for {id, message} <- @streams.messages do %>
+        <div id={id} class="mb-4">
           <span class="font-bold">{message.user.username}</span>
           <p>{message.content}</p>
         </div>
       <% end %>
     </div>
+
+    <div id="sample" phx-hook="MyHook">
+      Some content
+    </div>
     
-<!-- Message Form -->
-    <form phx-submit="send_message" class="p-4 border-t">
+<!-- Message Input -->
+    <form id="message-form" phx-submit="send_message" class="p-4 border-t" phx-hook="ClearInput">
       <input
         type="text"
         name="content"
         placeholder="Type a message..."
         class="w-full p-2 border rounded"
+        autocomplete="off"
       />
     </form>
   </div>

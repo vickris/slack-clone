@@ -43,6 +43,7 @@ defmodule SlackCloneWeb.ChannelLive.FormComponent do
   #   {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
   # end
 
+  @impl true
   def handle_event("save", %{"channel" => channel_params}, socket) do
     save_channel(socket, socket.assigns.action, channel_params)
   end
