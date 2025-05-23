@@ -17,6 +17,7 @@ defmodule SlackClone.Application do
       # Start a worker by calling: SlackClone.Worker.start_link(arg)
       # {SlackClone.Worker, arg},
       # Start to serve requests, typically the last entry
+      SlackCloneWeb.Presence,
       SlackCloneWeb.Endpoint
     ]
 

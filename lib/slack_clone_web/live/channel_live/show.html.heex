@@ -3,6 +3,16 @@
   <div class="w-64 border-r p-4">
     <h2 class="font-bold">#{@channel.name}</h2>
     <p class="text-sm text-gray-500">{@channel.description}</p>
+
+    <div class="p-4 border-l w-64">
+      <h3 class="font-bold mb-2">Online ({map_size(@presences)})</h3>
+      <%= for {_user_id, %{metas: [meta | _]}} <- @presences do %>
+        <div class="flex items-center mb-1">
+          <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+          <span>{meta.username}</span>
+        </div>
+      <% end %>
+    </div>
   </div>
   
 <!-- Chat Area -->

@@ -3,6 +3,8 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   alias SlackClone.Chat
   alias SlackClone.Repo
+  alias SlackCloneWeb.OnlineUsersInChannel
+  alias SlackCloneWeb.Presence
 
   @impl true
   def mount(%{"id" => channel_id}, %{"user_token" => user_token}, socket) do
@@ -10,6 +12,20 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     channel = Chat.get_channel!(channel_id)
 
     if authorized?(current_user, channel) do
+      Presence.track(
+        self(),
+        "channel:#{channel_id}",
+        current_user.id,
+        %{
+          username: current_user.username,
+          user_id: current_user.id,
+          online_at: System.system_time(:second)
+        }
+      )
+
+      # Get initial presence
+      presences = Presence.list("channel:#{channel_id}")
+
       Chat.subscribe_to_channel_messages(channel_id)
 
       initial_messages =
@@ -19,6 +35,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
       socket =
         socket
         |> assign(:channel, channel)
+        |> assign(:presences, presences)
         |> assign(:current_user, current_user)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
         |> stream(:messages, initial_messages)
@@ -27,6 +44,11 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     else
       {:ok, redirect(socket, to: ~p"/channels")}
     end
+  end
+
+  @impl true
+  def handle_info(%{event: "presence_diff"}, socket) do
+    {:noreply, assign(socket, :presences, Presence.list("channel:#{socket.assigns.channel.id}"))}
   end
 
   @impl true
