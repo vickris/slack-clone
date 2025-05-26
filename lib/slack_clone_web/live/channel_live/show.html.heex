@@ -4,6 +4,23 @@
     <h2 class="text-xl font-bold text-gray-800">#{@channel.name}</h2>
     <p class="text-sm text-gray-500 mt-1">{@channel.description}</p>
     
+<!-- Online users sidebar -->
+    <div class="bg-white border-l p-4 overflow-y-auto">
+      <h3 class="font-bold text-gray-800 mb-3">Online ({map_size(@presences)})</h3>
+      <div class="space-y-2">
+        <%= for {_user_id, %{metas: [meta | _]}} <- @presences do %>
+          <div class="flex items-center">
+            <div class="relative mr-2">
+              <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div class="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75">
+              </div>
+            </div>
+            <span class="text-gray-700">{meta.username}</span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
 <!-- Optional channel list could go here -->
   </div>
   
@@ -17,47 +34,12 @@
       phx-hook="MessageScroll"
     >
       <%= for {id, message} <- @streams.messages do %>
-        <div id={id} class="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-start space-x-3">
-            <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span class="text-blue-600 font-medium text-sm">
-                {String.at(message.user.username, 0) |> String.upcase()}
-              </span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-baseline space-x-2">
-                <span class="font-medium text-gray-900">{message.user.username}</span>
-                <span class="text-xs text-gray-500">
-                  {Timex.format!(message.inserted_at, "{h12}:{m} {AM}")}
-                </span>
-              </div>
-              <p class="mt-1 text-gray-800">{message.content}</p>
-              
-<!-- Thread controls -->
-              <div class="mt-2 flex space-x-3 text-xs text-gray-500">
-                <button
-                  phx-click="show_thread"
-                  phx-value-message-id={message.id}
-                  class="hover:text-blue-500 hover:underline"
-                >
-                  <%= if message.replies && length(message.replies) > 0 do %>
-                    {length(message.replies)} replies
-                  <% else %>
-                    Reply
-                  <% end %>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <%= if @show_thread == message.id do %>
-            <.live_component
-              module={SlackCloneWeb.MessageThread}
-              id={"thread-#{message.id}"}
-              replies={message.replies || []}
-            />
-          <% end %>
-        </div>
+        <.live_component
+          module={SlackCloneWeb.MessageComponent}
+          id={id}
+          message={message}
+          current_user_id={@current_user.id}
+        />
       <% end %>
     </div>
     
@@ -78,22 +60,6 @@
           Send
         </button>
       </form>
-    </div>
-  </div>
-  
-<!-- Online users sidebar -->
-  <div class="w-56 bg-white border-l p-4 overflow-y-auto">
-    <h3 class="font-bold text-gray-800 mb-3">Online ({map_size(@presences)})</h3>
-    <div class="space-y-2">
-      <%= for {_user_id, %{metas: [meta | _]}} <- @presences do %>
-        <div class="flex items-center">
-          <div class="relative mr-2">
-            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-            <div class="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
-          </div>
-          <span class="text-gray-700">{meta.username}</span>
-        </div>
-      <% end %>
     </div>
   </div>
 </div>

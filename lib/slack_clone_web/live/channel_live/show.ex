@@ -39,6 +39,11 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:show_thread, nil)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
         |> stream(:messages, initial_messages)
+        |> allow_upload(:avatar,
+          accept: ~w(.jpg .jpeg .png),
+          max_entries: 1,
+          max_file_size: 5_000_000
+        )
 
       {:ok, socket}
     else
@@ -67,8 +72,10 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   end
 
   def handle_event("show_thread", %{"message-id" => message_id}, socket) do
+    IO.inspect(socket.assigns.show_thread, label: "Current Show Thread ID")
     # Toggle thread visibility
-    show_thread = if socket.assigns.show_thread == message_id, do: nil, else: message_id
+    show_thread = if socket.assigns.show_thread, do: nil, else: message_id |> String.to_integer()
+    IO.inspect(show_thread, label: "Show Thread ID")
     {:noreply, assign(socket, :show_thread, show_thread)}
   end
 

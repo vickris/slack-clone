@@ -47,7 +47,7 @@ defmodule SlackClone.Chat do
     |> where(channel_id: ^channel_id)
     |> where([m], is_nil(m.thread_id))
     |> preload([:user, replies: :user])
-    |> order_by(desc: :inserted_at)
+    # |> order_by(desc: :inserted_at)
     |> Repo.all()
   end
 
