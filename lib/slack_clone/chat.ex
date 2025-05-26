@@ -42,13 +42,21 @@ defmodule SlackClone.Chat do
     |> Repo.insert()
   end
 
-  def list_messages(channel_id) do
-    Message
-    |> where(channel_id: ^channel_id)
-    |> where([m], is_nil(m.thread_id))
-    |> preload([:user, replies: :user])
-    # |> order_by(desc: :inserted_at)
-    |> Repo.all()
+  def list_messages_paginated(channel_id, cursor \\ nil, limit \\ 10) do
+    base_query =
+      Message
+      |> where(channel_id: ^channel_id)
+      |> where([m], is_nil(m.thread_id))
+      |> order_by([m], desc: m.inserted_at)
+      |> preload([:user, replies: :user])
+
+    paginated_query =
+      case cursor do
+        nil -> base_query
+        cursor -> base_query |> where([m], m.inserted_at < ^cursor)
+      end
+
+    Repo.all(from m in paginated_query, limit: ^limit)
   end
 
   def update_channel(%Channel{} = channel, attrs) do

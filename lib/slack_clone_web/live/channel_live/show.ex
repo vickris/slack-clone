@@ -5,6 +5,8 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   alias SlackClone.Repo
   alias SlackCloneWeb.Presence
 
+  @page_size 20
+
   @impl true
   def mount(%{"id" => channel_id}, %{"user_token" => user_token}, socket) do
     current_user = SlackClone.Accounts.get_user_by_session_token(user_token)
@@ -22,14 +24,12 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         }
       )
 
-      # Get initial presence
       presences = Presence.list("channel:#{channel_id}")
 
       Chat.subscribe_to_channel_messages(channel_id)
 
-      initial_messages =
-        channel_id
-        |> Chat.list_messages()
+      # Fetch paginated messages (most recent first)
+      {messages, next_cursor} = Chat.list_messages_paginated(channel_id, nil, @page_size)
 
       socket =
         socket
@@ -37,8 +37,10 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:presences, presences)
         |> assign(:current_user, current_user)
         |> assign(:show_thread, nil)
+        |> assign(:messages_cursor, next_cursor)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
-        |> stream(:messages, initial_messages)
+        # oldest first for chat
+        |> stream(:messages, Enum.reverse(messages))
         |> allow_upload(:avatar,
           accept: ~w(.jpg .jpeg .png),
           max_entries: 1,
@@ -59,7 +61,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   @impl true
   def handle_info({:message_created, message}, socket) do
     message_with_user = Repo.preload(message, [:user, :replies])
-
     {:noreply, stream_insert(socket, :messages, message_with_user)}
   end
 
@@ -72,10 +73,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   end
 
   def handle_event("show_thread", %{"message-id" => message_id}, socket) do
-    IO.inspect(socket.assigns.show_thread, label: "Current Show Thread ID")
-    # Toggle thread visibility
     show_thread = if socket.assigns.show_thread, do: nil, else: message_id |> String.to_integer()
-    IO.inspect(show_thread, label: "Show Thread ID")
     {:noreply, assign(socket, :show_thread, show_thread)}
   end
 
@@ -92,6 +90,21 @@ defmodule SlackCloneWeb.ChannelLive.Show do
       {:error, changeset} ->
         {:noreply, assign(socket, :message_changeset, changeset)}
     end
+  end
+
+  # Cursor pagination event
+  @impl true
+  def handle_event("load_more_messages", _params, socket) do
+    channel_id = socket.assigns.channel.id
+    cursor = socket.assigns.messages_cursor
+
+    {messages, next_cursor} = Chat.list_messages_paginated(channel_id, cursor, @page_size)
+
+    # Prepend older messages to the stream
+    {:noreply,
+     socket
+     |> assign(:messages_cursor, next_cursor)
+     |> stream(:messages, Enum.reverse(messages), at: 0)}
   end
 
   defp page_title(:show), do: "Show Channel"
