@@ -92,8 +92,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         []
       end
 
-    IO.inspect(uploaded_files, label: "Uploaded Files-======")
-
     case Chat.create_message(%{
            content: content,
            channel_id: channel.id,
@@ -110,6 +108,20 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   end
 
   def handle_event("validate", _unsigned_params, socket) do
+    IO.inspect(socket.assigns.uploads.avatar, label: "Avatar Upload Entries")
+
+    upload_errors =
+      for {_error_id, msg} <- socket.assigns.uploads.avatar.errors || [] do
+        error_to_string(msg)
+      end
+
+    socket =
+      if length(upload_errors) > 0 do
+        put_flash(socket, :error, Enum.join(upload_errors, ", "))
+      else
+        socket
+      end
+
     {:noreply, socket}
   end
 
@@ -145,8 +157,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     {:noreply, socket}
   end
 
-  # defp uploads_path(entry) do
-  #   IO.inspect(entry, label: "Upload Entry")
-  #   Path.join(["priv/static/uploads", "#{entry.uuid}-#{entry.client_name}"])
-  # end
+  defp error_to_string(:too_large), do: "Too large"
+  defp error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+  defp error_to_string(:external_client_failure), do: "Something went terribly wrong"
 end

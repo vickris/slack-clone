@@ -50,18 +50,54 @@ Hooks.ClearInput = {
 
 Hooks.FileUpload = {
   mounted() {
-    this.el.addEventListener("change", e => {
-      const files = Array.from(e.target.files)
-      console.log("Selected files:", files)
+    const input = this.el
+    const dropZone = document.querySelector(`[phx-drop-target="#${input.id}"]`)
 
-      // Validate file size client-side
-      const validFiles = files.filter(file => file.size <= 10_000_000)
-      if (validFiles.length !== files.length) {
-        alert("Some files exceed 10MB limit")
-      }
+    // Handle file selection via click
+    input.addEventListener("change", (e) => {
+      this.handleFiles(e.target.files)
     })
+
+    // Handle drag-and-drop
+    if (dropZone) {
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault()
+        dropZone.classList.add("border-blue-500", "bg-blue-50")
+      })
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("border-blue-500", "bg-blue-50")
+      })
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault()
+        dropZone.classList.remove("border-blue-500", "bg-blue-50")
+        this.handleFiles(e.dataTransfer.files)
+      })
+    }
+  },
+  handleFiles(files) {
+    const fileList = Array.from(files)
+    console.log("Processing files:", fileList)
+
+    // Validate files
+    const validFiles = fileList.filter(file => file.size <= 10_000_000)
+    if (validFiles.length !== fileList.length) {
+      alert("Some files exceed 10MB limit")
+    }
+
+    // Create a new DataTransfer to assign files
+    const dataTransfer = new DataTransfer()
+    validFiles.forEach(file => dataTransfer.items.add(file))
+
+    // Assign back to input
+    this.el.files = dataTransfer.files
+
+    // Manually trigger LiveView processing
+    this.el.dispatchEvent(new Event("input", { bubbles: true }))
   }
 }
+
 
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,

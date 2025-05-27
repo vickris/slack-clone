@@ -1,5 +1,4 @@
 defmodule SlackCloneWeb.ChannelLive.MessageThread do
-  # use Phoenix.Component
   use Phoenix.LiveComponent
 
   def render(assigns) do

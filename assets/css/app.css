@@ -3,3 +3,9 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+[phx-drop-target].drag-over {
+    border-color: #3b82f6;
+    /* Tailwind's blue-500 */
+    background-color: #eff6ff;
+    /* Tailwind's blue-50 */
+}
