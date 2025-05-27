@@ -36,15 +36,16 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:channel, channel)
         |> assign(:presences, presences)
         |> assign(:current_user, current_user)
-        |> assign(:show_thread, nil)
         |> assign(:messages_cursor, next_cursor)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
-        # oldest first for chat
         |> stream(:messages, Enum.reverse(messages))
+        |> assign(:uploaded_files, [])
         |> allow_upload(:avatar,
-          accept: ~w(.jpg .jpeg .png),
-          max_entries: 1,
-          max_file_size: 5_000_000
+          accept: ~w(.jpg .jpeg .png .pdf .doc .docx .xls .xlsx .txt),
+          max_entries: 3,
+          max_file_size: 10_000_000,
+          auto_upload: true,
+          progress: &handle_progress/3
         )
 
       {:ok, socket}
@@ -72,17 +73,33 @@ defmodule SlackCloneWeb.ChannelLive.Show do
      |> assign(:channel, Chat.get_channel!(id))}
   end
 
-  def handle_event("show_thread", %{"message-id" => message_id}, socket) do
-    show_thread = if socket.assigns.show_thread, do: nil, else: message_id |> String.to_integer()
-    {:noreply, assign(socket, :show_thread, show_thread)}
-  end
-
   @impl true
-  def handle_event("send_message", %{"content" => text}, socket) do
+  def handle_event("send_message", %{"content" => content}, socket) do
     current_user = socket.assigns.current_user
     channel = socket.assigns.channel
 
-    case Chat.create_message(channel, current_user, text) do
+    {completed_uploads, _in_progress} = uploaded_entries(socket, :avatar)
+
+    uploaded_files =
+      if length(completed_uploads) > 0 do
+        consume_uploaded_entries(socket, :avatar, fn %{path: path}, entry ->
+          dest = Path.join(["priv/static/uploads", "#{entry.uuid}-#{entry.client_name}"])
+          File.mkdir_p!("priv/static/uploads")
+          File.cp!(path, dest)
+          {:ok, "/uploads/#{Path.basename(dest)}"}
+        end)
+      else
+        []
+      end
+
+    IO.inspect(uploaded_files, label: "Uploaded Files-======")
+
+    case Chat.create_message(%{
+           content: content,
+           channel_id: channel.id,
+           user_id: current_user.id,
+           attachments: uploaded_files
+         }) do
       {:ok, message} ->
         Chat.broadcast_new_message(channel.id, message)
         {:noreply, socket}
@@ -90,6 +107,15 @@ defmodule SlackCloneWeb.ChannelLive.Show do
       {:error, changeset} ->
         {:noreply, assign(socket, :message_changeset, changeset)}
     end
+  end
+
+  def handle_event("validate", _unsigned_params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :avatar, ref)}
   end
 
   # Cursor pagination event
@@ -114,4 +140,13 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     channel = Repo.preload(channel, :members)
     Enum.any?(channel.members, fn member -> member.id == current_user.id end)
   end
+
+  defp handle_progress(:avatar, _entry, socket) do
+    {:noreply, socket}
+  end
+
+  # defp uploads_path(entry) do
+  #   IO.inspect(entry, label: "Upload Entry")
+  #   Path.join(["priv/static/uploads", "#{entry.uuid}-#{entry.client_name}"])
+  # end
 end

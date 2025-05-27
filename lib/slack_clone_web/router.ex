@@ -79,6 +79,12 @@ defmodule SlackCloneWeb.Router do
     end
   end
 
+  scope "/uploads", SlackCloneWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/*path", UploadController, :show
+  end
+
   scope "/", SlackCloneWeb do
     pipe_through [:browser]
 

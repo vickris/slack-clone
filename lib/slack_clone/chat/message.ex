@@ -7,6 +7,7 @@ defmodule SlackClone.Chat.Message do
 
   schema "messages" do
     field :content, :string
+    field :attachments, {:array, :string}
     belongs_to :user, User
     belongs_to :channel, Channel
     belongs_to :thread, __MODULE__
@@ -18,7 +19,8 @@ defmodule SlackClone.Chat.Message do
   @doc false
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:content, :user_id, :channel_id, :thread_id])
+    |> cast(attrs, [:content, :user_id, :channel_id, :thread_id, :attachments])
+    |> validate_length(:attachments, max: 3)
     |> validate_required([:content, :user_id, :channel_id])
   end
 end

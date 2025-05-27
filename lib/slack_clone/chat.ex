@@ -36,9 +36,9 @@ defmodule SlackClone.Chat do
     )
   end
 
-  def create_message(channel, user, text) do
+  def create_message(attrs) do
     %Message{}
-    |> Message.changeset(%{content: text, user_id: user.id, channel_id: channel.id})
+    |> Message.changeset(attrs)
     |> Repo.insert()
   end
 
@@ -56,7 +56,15 @@ defmodule SlackClone.Chat do
         cursor -> base_query |> where([m], m.inserted_at < ^cursor)
       end
 
-    Repo.all(from m in paginated_query, limit: ^limit)
+    messages = Repo.all(from m in paginated_query, limit: ^limit)
+
+    next_cursor =
+      case List.last(messages) do
+        nil -> nil
+        last_msg -> last_msg.inserted_at
+      end
+
+    {messages, next_cursor}
   end
 
   def update_channel(%Channel{} = channel, attrs) do

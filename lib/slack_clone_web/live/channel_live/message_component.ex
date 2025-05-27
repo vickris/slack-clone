@@ -18,6 +18,19 @@ defmodule SlackCloneWeb.MessageComponent do
             </span>
           </div>
           <p class="mt-1 text-gray-800">{@message.content}</p>
+          <%= if @message.attachments && length(@message.attachments) > 0 do %>
+            <div class="mt-2 space-y-2">
+              <%= for attachment <- @message.attachments do %>
+                <.live_component
+                  module={SlackCloneWeb.ChannelLive.FilePreview}
+                  id={"file-preview-#{attachment}"}
+                  class="bg-gray-50 p-2 rounded"
+                  phx-hook="FilePreview"
+                  url={"/uploads/#{Path.basename(attachment)}"}
+                />
+              <% end %>
+            </div>
+          <% end %>
           <!-- Thread controls -->
           <div class="mt-2 flex space-x-3 text-xs text-gray-500">
             <button
@@ -37,7 +50,7 @@ defmodule SlackCloneWeb.MessageComponent do
           </div>
           <%= if @show_thread do %>
             <.live_component
-              module={SlackCloneWeb.MessageThread}
+              module={SlackCloneWeb.ChannelLive.MessageThread}
               id={"thread-#{@message.id}"}
               replies={@message.replies || []}
             />

@@ -43,22 +43,83 @@
       <% end %>
     </div>
     
-<!-- Message Input -->
+<!-- Replace everything from the form down (keep your messages container) -->
     <div class="p-4 border-t bg-white">
-      <form id="message-form" phx-submit="send_message" class="flex" phx-hook="ClearInput">
-        <input
-          type="text"
-          name="content"
-          class="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Type a message..."
-          autocomplete="off"
-        />
-        <button
-          type="submit"
-          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r-lg transition-colors duration-200"
+      
+<!-- Combined dropzone and form -->
+      <form
+        id="message-form"
+        phx-submit="send_message"
+        phx-drop-target={@uploads.avatar.ref}
+        phx-change="validate"
+        class="space-y-2"
+      >
+        <!-- Drag-and-drop area -->
+        <div
+          phx-drop-target={@uploads.avatar.ref}
+          class="border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          phx-click={JS.dispatch("click", to: "##{@uploads.avatar.ref}")}
         >
-          Send
-        </button>
+          <.live_file_input upload={@uploads.avatar} class="sr-only" />
+          <%= if Enum.empty?(@uploads.avatar.entries) do %>
+            <div class="text-center">
+              <div class="flex justify-center">
+                <.icon name="hero-cloud-arrow-up" class="w-8 h-8 text-gray-400" />
+              </div>
+              <p class="mt-2 text-sm text-gray-600">
+                Drag files here or click to browse
+              </p>
+              <p class="text-xs text-gray-400 mt-1">
+                (Max 3 files, 10MB each)
+              </p>
+            </div>
+          <% else %>
+            <div class="space-y-2">
+              <%= for entry <- @uploads.avatar.entries do %>
+                <div class="flex items-center p-2 bg-gray-50 rounded-lg">
+                  <.live_img_preview entry={entry} class="h-10 w-10 object-cover rounded" />
+                  <div class="ml-2 flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                      {entry.client_name}
+                    </p>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div
+                        class="bg-blue-600 h-1.5 rounded-full"
+                        style={"width: #{entry.progress}%"}
+                      >
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    phx-click="cancel-upload"
+                    phx-value-ref={entry.ref}
+                    class="ml-2 text-red-500 hover:text-red-700 p-1"
+                  >
+                    <.icon name="hero-x-mark" class="w-4 h-4" />
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        
+<!-- Message input and send button -->
+        <div class="flex items-center space-x-2">
+          <input
+            type="text"
+            name="content"
+            class="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Type a message..."
+          />
+          <button
+            type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            disabled={!Enum.all?(@uploads.avatar.entries, & &1.done?)}
+          >
+            Send
+          </button>
+        </div>
       </form>
     </div>
   </div>

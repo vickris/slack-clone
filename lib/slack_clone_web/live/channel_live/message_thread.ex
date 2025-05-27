@@ -1,4 +1,4 @@
-defmodule SlackCloneWeb.MessageThread do
+defmodule SlackCloneWeb.ChannelLive.MessageThread do
   # use Phoenix.Component
   use Phoenix.LiveComponent
 

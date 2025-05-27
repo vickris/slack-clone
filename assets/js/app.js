@@ -48,6 +48,21 @@ Hooks.ClearInput = {
   }
 };
 
+Hooks.FileUpload = {
+  mounted() {
+    this.el.addEventListener("change", e => {
+      const files = Array.from(e.target.files)
+      console.log("Selected files:", files)
+
+      // Validate file size client-side
+      const validFiles = files.filter(file => file.size <= 10_000_000)
+      if (validFiles.length !== files.length) {
+        alert("Some files exceed 10MB limit")
+      }
+    })
+  }
+}
+
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
