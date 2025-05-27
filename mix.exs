@@ -59,7 +59,11 @@ defmodule SlackClone.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:sweet_xml, "~> 0.7.5"},
+      {:hackney, "~> 1.24"}
     ]
   end
 
