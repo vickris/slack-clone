@@ -45,6 +45,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
           max_entries: 3,
           max_file_size: 10_000_000,
           auto_upload: true,
+          external: &presign_upload/2,
           progress: &handle_progress/3
         )
 
@@ -79,14 +80,12 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     channel = socket.assigns.channel
 
     {completed_uploads, _in_progress} = uploaded_entries(socket, :avatar)
+    IO.inspect(completed_uploads, label: "Completed Uploads====")
 
     uploaded_files =
       if length(completed_uploads) > 0 do
-        consume_uploaded_entries(socket, :avatar, fn %{path: path}, entry ->
-          dest = Path.join(["priv/static/uploads", "#{entry.uuid}-#{entry.client_name}"])
-          File.mkdir_p!("priv/static/uploads")
-          File.cp!(path, dest)
-          {:ok, "/uploads/#{Path.basename(dest)}"}
+        consume_uploaded_entries(socket, :avatar, fn %{key: key}, _entry ->
+          {:ok, SlackClone.Aws.S3Upload.construct_public_url(key)}
         end)
       else
         []
@@ -100,10 +99,17 @@ defmodule SlackCloneWeb.ChannelLive.Show do
          }) do
       {:ok, message} ->
         Chat.broadcast_new_message(channel.id, message)
-        {:noreply, socket}
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Message sent!")
+         |> push_event("reset-form", %{})}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, :message_changeset, changeset)}
+        {:noreply,
+         socket
+         |> assign(:message_changeset, changeset)
+         |> put_flash(:error, "Failed to send message.")}
     end
   end
 
@@ -155,6 +161,22 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   defp handle_progress(:avatar, _entry, socket) do
     {:noreply, socket}
+  end
+
+  defp presign_upload(entry, socket) do
+    IO.inspect(entry, label: "Presigning Upload Entry====")
+
+    case SlackClone.Aws.S3Upload.generate_presigned_url(
+           entry.client_name,
+           entry.client_type
+         ) do
+      {:ok, upload_url, key} ->
+        meta = %{key: key, upload_url: upload_url, uploader: "S3"}
+        {:ok, meta, socket}
+
+      {:error, reason} ->
+        {:error, %{error: "Failed to generate S3 URL: #{reason}"}, socket}
+    end
   end
 
   defp error_to_string(:too_large), do: "Too large"

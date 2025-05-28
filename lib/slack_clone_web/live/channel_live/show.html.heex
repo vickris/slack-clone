@@ -56,11 +56,13 @@
       >
         <!-- Drag-and-drop area -->
         <div
+          id="dropzone"
           phx-drop-target={@uploads.avatar.ref}
           class="border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
           phx-click={JS.dispatch("click", to: "##{@uploads.avatar.ref}")}
         >
-          <.live_file_input upload={@uploads.avatar} class="sr-only" />
+          <.live_file_input upload={@uploads.avatar} class="sr-only" id="file-input" />
+
           <%= if Enum.empty?(@uploads.avatar.entries) do %>
             <div class="text-center">
               <div class="flex justify-center">

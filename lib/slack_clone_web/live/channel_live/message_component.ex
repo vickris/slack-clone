@@ -23,10 +23,10 @@ defmodule SlackCloneWeb.MessageComponent do
               <%= for attachment <- @message.attachments do %>
                 <.live_component
                   module={SlackCloneWeb.ChannelLive.FilePreview}
-                  id={"file-preview-#{attachment}"}
+                  id={"file-preview-#{Path.basename(attachment)}"}
                   class="bg-gray-50 p-2 rounded"
                   phx-hook="FilePreview"
-                  url={"/uploads/#{Path.basename(attachment)}"}
+                  url={attachment}
                 />
               <% end %>
             </div>

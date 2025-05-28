@@ -22,6 +22,7 @@ import { Socket } from "phoenix"
 
 import { LiveSocket } from "../../deps/phoenix_live_view"
 import topbar from "../vendor/topbar"
+import Uploaders from "./uploaders"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
@@ -48,61 +49,109 @@ Hooks.ClearInput = {
   }
 };
 
-Hooks.FileUpload = {
+Hooks.DirectS3Upload = {
   mounted() {
-    const input = this.el
-    const dropZone = document.querySelector(`[phx-drop-target="#${input.id}"]`)
+    console.log("DirectS3Upload hook mounted=====")
+    this.input = this.el.querySelector('input[type="file"]')
+    console.log("File input element:", this.input)
+    // Try to get the LiveView instance from the parent element if not found on input
+    // Try to get the LiveView instance from the input, the element, or their parents
+    this.view = this.input?.__view__ || this.el.__view__ || this.input?.closest("[data-phx-view]")?.__view__ || this.el.closest?.("[data-phx-view]")?.__view__
+    console.log("LiveView instance:", this.view)
+    console.log("File input:", this.input)
+    if (!this.input) {
+      console.error("No file input found in DirectS3Upload hook")
+      return
+    }
 
-    // Handle file selection via click
-    input.addEventListener("change", (e) => {
-      this.handleFiles(e.target.files)
-    })
+    // 1. Handle click-based file selection
+    this.input.addEventListener("change", (e) => this.handleFiles(e.target.files))
 
-    // Handle drag-and-drop
+    // 2. Setup drag-and-drop on parent element
+    const dropZone = document.getElementById("dropzone")
+    console.log("Drop zone:", dropZone)
     if (dropZone) {
-      dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault()
-        dropZone.classList.add("border-blue-500", "bg-blue-50")
-      })
+      console.log("Drop zone found, setting up drag-and-drop=====")
+        // Prevent default drag behaviors
+        ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          dropZone.addEventListener(eventName, preventDefaults, false)
+        })
 
-      dropZone.addEventListener("dragleave", () => {
-        dropZone.classList.remove("border-blue-500", "bg-blue-50")
-      })
+        // Highlight drop zone
+        ;['dragenter', 'dragover'].forEach(eventName => {
+          dropZone.addEventListener(eventName, highlight, false)
+        })
+        ;['dragleave', 'drop'].forEach(eventName => {
+          dropZone.addEventListener(eventName, unhighlight, false)
+        })
 
-      dropZone.addEventListener("drop", (e) => {
-        e.preventDefault()
-        dropZone.classList.remove("border-blue-500", "bg-blue-50")
-        this.handleFiles(e.dataTransfer.files)
+      // Handle dropped files
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer
+        this.handleFiles(dt.files)
       })
     }
   },
+
   handleFiles(files) {
-    const fileList = Array.from(files)
-    console.log("Processing files:", fileList)
+    console.log("Handling files:", files)
+    const view = this.input.__view__
+    console.log("LiveView instance: handling files", view)
+    console.log("LiveView instance: handling files", this.el.__view__)
+    if (!view) return
 
-    // Validate files
-    const validFiles = fileList.filter(file => file.size <= 10_000_000)
-    if (validFiles.length !== fileList.length) {
-      alert("Some files exceed 10MB limit")
-    }
+    Array.from(files).forEach(file => {
+      // 1. Create LiveView upload entry
+      const entry = view.getEntry(this.el, file.name)
 
-    // Create a new DataTransfer to assign files
-    const dataTransfer = new DataTransfer()
-    validFiles.forEach(file => dataTransfer.items.add(file))
+      // 2. Validate before proceeding
+      if (!entry || !entry.meta?.upload_url) {
+        console.error("Missing upload metadata for", file.name)
+        return
+      }
 
-    // Assign back to input
-    this.el.files = dataTransfer.files
+      // 3. Direct S3 upload
+      const xhr = new XMLHttpRequest()
+      xhr.open("PUT", entry.meta.upload_url, true)
+      xhr.setRequestHeader("Content-Type", file.type)
 
-    // Manually trigger LiveView processing
-    this.el.dispatchEvent(new Event("input", { bubbles: true }))
+      xhr.upload.onprogress = (e) => {
+        const percent = Math.round((e.loaded / e.total) * 100)
+        view.pushFileProgress(this.el, entry.ref, percent)
+      }
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          view.pushFileProgress(this.el, entry.ref, 100)
+        } else {
+          view.pushFileProgress(this.el, entry.ref, { error: "Upload failed" })
+        }
+      }
+
+      xhr.send(file)
+    })
   }
 }
 
+// Helper functions
+function preventDefaults(e) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+function highlight(e) {
+  e.currentTarget.classList.add('bg-blue-50', 'border-blue-400')
+}
+
+function unhighlight(e) {
+  e.currentTarget.classList.remove('bg-blue-50', 'border-blue-400')
+}
 
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: Hooks
+  hooks: Hooks,
+  uploaders: Uploaders
 })
 
 // Show progress bar on live navigation and form submits
