@@ -85,7 +85,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     uploaded_files =
       if length(completed_uploads) > 0 do
         consume_uploaded_entries(socket, :avatar, fn %{key: key}, _entry ->
-          {:ok, SlackClone.Aws.S3Upload.construct_public_url(key)}
+          {:ok, key}
         end)
       else
         []

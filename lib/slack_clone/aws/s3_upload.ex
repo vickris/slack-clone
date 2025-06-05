@@ -25,4 +25,14 @@ defmodule SlackClone.Aws.S3Upload do
     region = Application.get_env(:ex_aws, :region)
     "https://#{bucket}.s3.#{region}.amazonaws.com/#{key}"
   end
+
+  def presigned_url_for_get_requests(key) do
+    opts = [virtual_host: true, bucket_as_host: true]
+    bucket = Application.get_env(:slack_clone, :s3_bucket)
+
+    {:ok, url} =
+      ExAws.Config.new(:s3) |> S3.presigned_url(:get, bucket <> ".s3.amazonaws.com", key, opts)
+
+    url
+  end
 end
