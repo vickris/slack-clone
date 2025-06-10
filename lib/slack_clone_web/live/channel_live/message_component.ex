@@ -14,7 +14,7 @@ defmodule SlackCloneWeb.MessageComponent do
           <div class="flex items-baseline space-x-2">
             <span class="font-medium text-gray-900">{@message.user.username}</span>
             <span class="text-xs text-gray-500">
-              {Timex.format!(@message.inserted_at, "{h12}:{m} {AM}")}
+              {Timex.format!(@message.inserted_at, "{YYYY}-{0M}-{0D} {h12}:{m} {AM}")}
             </span>
           </div>
           <p class="mt-1 text-gray-800">{@message.content}</p>

@@ -47,13 +47,17 @@ defmodule SlackClone.Chat do
       Message
       |> where(channel_id: ^channel_id)
       |> where([m], is_nil(m.thread_id))
-      |> order_by([m], desc: m.inserted_at)
+      |> order_by([m], asc: m.inserted_at)
       |> preload([:user, replies: :user])
 
     paginated_query =
       case cursor do
-        nil -> base_query
-        cursor -> base_query |> where([m], m.inserted_at < ^cursor)
+        nil ->
+          IO.puts("No cursor provided, fetching all messages====")
+          base_query
+
+        cursor ->
+          base_query |> where([m], m.inserted_at > ^cursor)
       end
 
     messages = Repo.all(from m in paginated_query, limit: ^limit)
@@ -63,6 +67,8 @@ defmodule SlackClone.Chat do
         nil -> nil
         last_msg -> last_msg.inserted_at
       end
+
+    IO.inspect({messages, next_cursor}, label: "Messages and Next Cursor")
 
     {messages, next_cursor}
   end

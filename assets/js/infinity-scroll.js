@@ -9,7 +9,7 @@ export default {
         return ((scrollTop + clientHeight) / scrollHeight) * 100;
     },
     mounted() {
-        this.threshold = 90;
+        this.threshold = 99;
         this.lastScrollPosition = 0;
 
         window.addEventListener("scroll", () => {

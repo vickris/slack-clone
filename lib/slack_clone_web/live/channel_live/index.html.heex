@@ -12,10 +12,10 @@
   rows={@streams.channels}
   row_click={fn {_id, channel} -> JS.navigate(~p"/channels/#{channel}") end}
 >
-  <:col :let={{_id, channel}} class="w-1/2">
+  <:col :let={{_id, channel}}>
     <.link navigate={~p"/channels/#{channel}"}>#{channel.name}</.link>
   </:col>
-  <:col :let={{_id, channel}} class="w-1/2">
+  <:col :let={{_id, channel}}>
     <.link navigate={~p"/channels/#{channel}"}>#{channel.description}</.link>
   </:col>
   <:action :let={{_id, channel}}>

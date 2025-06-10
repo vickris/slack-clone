@@ -38,7 +38,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:current_user, current_user)
         |> assign(:messages_cursor, next_cursor)
         |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
-        |> stream(:messages, Enum.reverse(messages))
+        |> stream(:messages, messages)
         |> assign(:uploaded_files, [])
         |> allow_upload(:avatar,
           accept: ~w(.jpg .jpeg .png .pdf .doc .docx .xls .xlsx .txt),
@@ -136,6 +136,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   @impl true
   def handle_event("load_more_messages", _params, socket) do
+    IO.puts("Loading more messages...===============")
     channel_id = socket.assigns.channel.id
     cursor = socket.assigns.messages_cursor
 
@@ -145,7 +146,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     {:noreply,
      socket
      |> assign(:messages_cursor, next_cursor)
-     |> stream(:messages, Enum.reverse(messages))}
+     |> stream(:messages, messages)}
   end
 
   defp page_title(:show), do: "Show Channel"
