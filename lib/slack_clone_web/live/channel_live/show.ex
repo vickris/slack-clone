@@ -5,7 +5,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   alias SlackClone.Repo
   alias SlackCloneWeb.Presence
 
-  @page_size 20
+  @page_size 5
 
   @impl true
   def mount(%{"id" => channel_id}, %{"user_token" => user_token}, socket) do
@@ -114,8 +114,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   end
 
   def handle_event("validate", _unsigned_params, socket) do
-    IO.inspect(socket.assigns.uploads.avatar, label: "Avatar Upload Entries")
-
     upload_errors =
       for {_error_id, msg} <- socket.assigns.uploads.avatar.errors || [] do
         error_to_string(msg)
@@ -136,7 +134,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     {:noreply, cancel_upload(socket, :avatar, ref)}
   end
 
-  # Cursor pagination event
   @impl true
   def handle_event("load_more_messages", _params, socket) do
     channel_id = socket.assigns.channel.id
@@ -148,7 +145,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     {:noreply,
      socket
      |> assign(:messages_cursor, next_cursor)
-     |> stream(:messages, Enum.reverse(messages), at: 0)}
+     |> stream(:messages, Enum.reverse(messages))}
   end
 
   defp page_title(:show), do: "Show Channel"

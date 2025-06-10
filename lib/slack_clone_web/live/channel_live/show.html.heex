@@ -31,7 +31,7 @@
       class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
       id="messages"
       phx-update="stream"
-      phx-hook="MessageScroll"
+      phx-hook="InfinityScroll"
     >
       <%= for {id, message} <- @streams.messages do %>
         <.live_component
@@ -53,6 +53,7 @@
         phx-drop-target={@uploads.avatar.ref}
         phx-change="validate"
         class="space-y-2"
+        phx-hook="ClearInput"
       >
         <!-- Drag-and-drop area -->
         <div

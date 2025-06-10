@@ -23,19 +23,13 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "../../deps/phoenix_live_view"
 import topbar from "../vendor/topbar"
 import Uploaders from "./uploaders"
+import infinityScroll from "./infinity-scroll"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 let Hooks = {}
 
-Hooks.MessageScroll = {
-  mounted() {
-    this.el.scrollTop = this.el.scrollHeight
-  },
-  updated() {
-    this.el.scrollTop = this.el.scrollHeight
-  }
-}
+Hooks.InfinityScroll = infinityScroll;
 
 Hooks.ClearInput = {
   mounted() {
