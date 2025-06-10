@@ -12,6 +12,7 @@ defmodule SlackClone.Chat.Message do
     belongs_to :channel, Channel
     belongs_to :thread, __MODULE__
     has_many :replies, __MODULE__, foreign_key: :thread_id
+    has_many :reactions, SlackClone.Chat.Reaction, on_delete: :delete_all
 
     timestamps()
   end

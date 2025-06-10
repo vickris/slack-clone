@@ -1,6 +1,6 @@
 defmodule SlackCloneWeb.MessageComponent do
   use Phoenix.LiveComponent
-
+  @impl true
   def render(assigns) do
     ~H"""
     <div id={@id} class="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
@@ -18,6 +18,13 @@ defmodule SlackCloneWeb.MessageComponent do
             </span>
           </div>
           <p class="mt-1 text-gray-800">{@message.content}</p>
+          <!-- Reactions -->
+          <.live_component
+            module={SlackCloneWeb.ChannelLive.Reactions.ReactionsComponent}
+            id={"reactions-#{@message.id}"}
+            reactions={@message.reactions || []}
+            message_id={@message.id}
+          />
           <%= if @message.attachments && length(@message.attachments) > 0 do %>
             <div class="mt-2 space-y-2">
               <%= for attachment <- @message.attachments do %>
@@ -30,6 +37,14 @@ defmodule SlackCloneWeb.MessageComponent do
                 />
               <% end %>
             </div>
+          <% end %>
+
+          <%= if @show_reaction_picker == @message.id do %>
+            <.live_component
+              module={SlackCloneWeb.Live.ChannelLive.Reactions.ReactionPicker}
+              id={"reaction-picker-#{@message.id}"}
+              message_id={@message.id}
+            />
           <% end %>
           <!-- Thread controls -->
           <div class="mt-2 flex space-x-3 text-xs text-gray-500">
@@ -61,10 +76,23 @@ defmodule SlackCloneWeb.MessageComponent do
     """
   end
 
+  @impl true
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns) |> assign_new(:show_thread, fn -> false end)}
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign_new(:show_thread, fn -> false end)
+      |> assign_new(:show_reaction_picker, fn -> false end)
+
+    {:ok, socket}
   end
 
+  @impl true
+  def handle_event("show_reaction_picker", %{"message_id" => message_id}, socket) do
+    {:noreply, assign(socket, show_reaction_picker: String.to_integer(message_id))}
+  end
+
+  @impl true
   def handle_event("toggle_thread", _params, socket) do
     {:noreply, update(socket, :show_thread, &(!&1))}
   end

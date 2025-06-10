@@ -3,6 +3,7 @@ defmodule SlackClone.Chat do
 
   alias SlackClone.Chat.Channel
   alias SlackClone.Chat.Message
+  alias SlackClone.Chat.Reaction
   alias SlackClone.Repo
 
   def list_channels do
@@ -36,10 +37,24 @@ defmodule SlackClone.Chat do
     )
   end
 
+  def broadcast_reaction_added(channel_id, reaction) do
+    Phoenix.PubSub.broadcast(
+      SlackClone.PubSub,
+      "channel:#{channel_id}",
+      {:reaction_added, reaction}
+    )
+  end
+
   def create_message(attrs) do
     %Message{}
     |> Message.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def get_reaction_by_user_and_message(user_id, message_id, emoji) do
+    Reaction
+    |> where(user_id: ^user_id, message_id: ^message_id, emoji: ^emoji)
+    |> Repo.one()
   end
 
   def list_messages_paginated(channel_id, cursor \\ nil, limit \\ 10) do
@@ -48,12 +63,11 @@ defmodule SlackClone.Chat do
       |> where(channel_id: ^channel_id)
       |> where([m], is_nil(m.thread_id))
       |> order_by([m], asc: m.inserted_at)
-      |> preload([:user, replies: :user])
+      |> preload([:user, :reactions, replies: :user])
 
     paginated_query =
       case cursor do
         nil ->
-          IO.puts("No cursor provided, fetching all messages====")
           base_query
 
         cursor ->
@@ -68,9 +82,19 @@ defmodule SlackClone.Chat do
         last_msg -> last_msg.inserted_at
       end
 
-    IO.inspect({messages, next_cursor}, label: "Messages and Next Cursor")
-
     {messages, next_cursor}
+  end
+
+  def add_reaction(user_id, message_id, emoji) do
+    IO.puts("Adding reaction: #{emoji} to message ID: #{message_id} by user ID: #{user_id}")
+
+    %Reaction{}
+    |> Reaction.changeset(%{message_id: message_id, user_id: user_id, emoji: emoji})
+    |> Repo.insert()
+  end
+
+  def remove_reaction(%Reaction{} = reaction) do
+    Repo.delete(reaction)
   end
 
   def update_channel(%Channel{} = channel, attrs) do

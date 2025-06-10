@@ -2,6 +2,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   use SlackCloneWeb, :live_view
 
   alias SlackClone.Chat
+  alias SlackClone.Chat.Message
   alias SlackClone.Repo
   alias SlackCloneWeb.Presence
 
@@ -67,6 +68,16 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   end
 
   @impl true
+  def handle_info({:reaction_added, %{id: message_id}}, socket) do
+    IO.puts("INSIDE BROADCAST FOR REACTION ADDED====")
+
+    message_with_reaction =
+      Repo.get!(Message, message_id) |> Repo.preload([:user, :reactions, replies: :user])
+
+    {:noreply, stream_insert(socket, :messages, message_with_reaction)}
+  end
+
+  @impl true
   def handle_params(%{"id" => id}, _, socket) do
     {:noreply,
      socket
@@ -80,7 +91,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     channel = socket.assigns.channel
 
     {completed_uploads, _in_progress} = uploaded_entries(socket, :avatar)
-    IO.inspect(completed_uploads, label: "Completed Uploads====")
 
     uploaded_files =
       if length(completed_uploads) > 0 do
@@ -113,6 +123,64 @@ defmodule SlackCloneWeb.ChannelLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("add_reaction", %{"emoji" => emoji, "message_id" => message_id}, socket) do
+    IO.inspect({emoji, message_id}, label: "Adding Reaction===")
+    current_user = socket.assigns.current_user
+
+    case Chat.add_reaction(current_user.id, message_id, emoji) do
+      {:ok, _reaction} ->
+        # Broadcast the new reaction to the channel
+        Chat.broadcast_reaction_added(socket.assigns.channel.id, %{
+          id: message_id,
+          reaction: %{emoji: emoji, user_id: current_user.id}
+        })
+
+        socket =
+          socket
+          |> assign(show_reaction_picker: nil)
+
+        {:noreply, put_flash(socket, :info, "Reaction added!")}
+
+      {:error, :already_reacted} ->
+        {:noreply, put_flash(socket, :info, "You already reacted with this emoji.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to add reaction: #{reason}")}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_reaction", %{"emoji" => emoji, "message_id" => message_id}, socket) do
+    current_user = socket.assigns.current_user
+
+    existing_reaction =
+      Chat.get_reaction_by_user_and_message(current_user.id, message_id, emoji)
+
+    case existing_reaction do
+      nil ->
+        # Add the reaction if it doesn't exist
+        Chat.add_reaction(current_user.id, message_id, emoji)
+
+      _ ->
+        # Remove the reaction if it exists
+        case Chat.remove_reaction(existing_reaction) do
+          {:ok, _reaction} ->
+            # Broadcast the reaction removal to the channel
+            Chat.broadcast_reaction_added(socket.assigns.channel.id, %{
+              id: message_id,
+              reaction: %{emoji: emoji, user_id: current_user.id, removed: true}
+            })
+
+            {:noreply, put_flash(socket, :info, "Reaction removed!")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to remove reaction: #{reason}")}
+        end
+    end
+  end
+
+  @impl true
   def handle_event("validate", _unsigned_params, socket) do
     upload_errors =
       for {_error_id, msg} <- socket.assigns.uploads.avatar.errors || [] do

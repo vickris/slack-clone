@@ -9,3 +9,28 @@
     background-color: #eff6ff;
     /* Tailwind's blue-50 */
 }
+
+/* In your app.css */
+.reaction {
+    transition: all 0.1s ease;
+}
+
+.reaction:hover {
+    transform: scale(1.1);
+}
+
+.reaction-picker {
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
