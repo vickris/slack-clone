@@ -17,6 +17,7 @@ defmodule SlackClone.Chat do
   def create_channel(attrs \\ %{}) do
     %Channel{}
     |> Channel.changeset(attrs)
+    |> IO.inspect(label: "Creating channel with attrs")
     |> Repo.insert()
   end
 
@@ -125,7 +126,7 @@ defmodule SlackClone.Chat do
     Repo.delete(channel)
   end
 
-  def change_channel(%Channel{} = channel) do
-    Channel.changeset(channel, %{})
+  def change_channel(%Channel{} = channel, attrs \\ %{}) do
+    Channel.changeset(channel, attrs)
   end
 end

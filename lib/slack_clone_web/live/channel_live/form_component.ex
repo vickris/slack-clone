@@ -1,6 +1,7 @@
 defmodule SlackCloneWeb.ChannelLive.FormComponent do
   use SlackCloneWeb, :live_component
 
+  import Phoenix.Component
   alias SlackClone.Chat
 
   @impl true
@@ -16,9 +17,11 @@ defmodule SlackCloneWeb.ChannelLive.FormComponent do
         for={@form}
         id="channel-form"
         phx-target={@myself}
+        phx-submit="save-channel"
         phx-change="validate"
-        phx-submit="save"
       >
+        <.input field={@form[:name]} label="Channel Name" />
+
         <:actions>
           <.button phx-disable-with="Saving...">Save Channel</.button>
         </:actions>
@@ -29,54 +32,60 @@ defmodule SlackCloneWeb.ChannelLive.FormComponent do
 
   @impl true
   def update(%{channel: channel} = assigns, socket) do
+    changeset = Chat.change_channel(channel)
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:form, fn ->
-       to_form(Chat.change_channel(channel))
-     end)}
+     |> assign(:form, to_form(changeset))}
   end
-
-  # @impl true
-  # def handle_event("validate", %{"channel" => channel_params}, socket) do
-  #   changeset = Chat.change_channel(socket.assigns.channel, channel_params)
-  #   {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
-  # end
 
   @impl true
-  def handle_event("save", %{"channel" => channel_params}, socket) do
-    save_channel(socket, socket.assigns.action, channel_params)
+  def handle_event("validate", %{"channel" => params}, socket) do
+    changeset =
+      socket.assigns.channel
+      |> Chat.change_channel(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :form, to_form(changeset))}
   end
 
-  defp save_channel(socket, :edit, channel_params) do
-    case Chat.update_channel(socket.assigns.channel, channel_params) do
+  def handle_event("save-channel", %{"channel" => params}, socket) do
+    # merge params with creator_id if it exists
+    params = Map.put(params, "creator_id", socket.assigns.current_user.id)
+    IO.inspect(params, label: "Params in save_channel")
+
+    save_channel(socket, socket.assigns.action, params)
+  end
+
+  defp save_channel(socket, :edit, params) do
+    case Chat.update_channel(socket.assigns.channel, params) do
       {:ok, channel} ->
-        notify_parent({:saved, channel})
+        send(self(), {:saved, channel})
 
         {:noreply,
          socket
          |> put_flash(:info, "Channel updated successfully")
          |> push_patch(to: socket.assigns.patch)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
     end
   end
 
-  defp save_channel(socket, :new, channel_params) do
-    case Chat.create_channel(channel_params) do
+  defp save_channel(socket, :new, params) do
+    case Chat.create_channel(params) do
       {:ok, channel} ->
-        notify_parent({:saved, channel})
+        send(self(), {:saved, channel})
 
         {:noreply,
          socket
          |> put_flash(:info, "Channel created successfully")
          |> push_patch(to: socket.assigns.patch)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+      {:error, changeset} ->
+        IO.inspect(changeset, label: "Error creating channel")
+        {:noreply, assign(socket, :form, to_form(changeset))}
     end
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

@@ -9,7 +9,11 @@ defmodule SlackCloneWeb.ChannelLive.Index do
   def mount(_params, %{"user_token" => user_token}, socket) do
     current_user = SlackClone.Accounts.get_user_by_session_token(user_token)
     channels = Chat.list_channels_for_user(current_user)
-    {:ok, stream(socket, :channels, channels)}
+
+    {:ok,
+     socket
+     |> assign(:current_user, current_user)
+     |> stream(:channels, channels)}
   end
 
   @impl true
@@ -36,7 +40,7 @@ defmodule SlackCloneWeb.ChannelLive.Index do
   end
 
   @impl true
-  def handle_info({SlackCloneWeb.ChannelLive.FormComponent, {:saved, channel}}, socket) do
+  def handle_info({:saved, channel}, socket) do
     {:noreply, stream_insert(socket, :channels, channel)}
   end
 
