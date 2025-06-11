@@ -38,7 +38,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         |> assign(:presences, presences)
         |> assign(:current_user, current_user)
         |> assign(:messages_cursor, next_cursor)
-        |> stream_configure(:messages, dom_id: &"message-#{&1.id}")
+        |> stream_configure(:messages, dom_id: & &1.id)
         |> stream(:messages, messages)
         |> assign(:uploaded_files, [])
         |> allow_upload(:avatar,
@@ -63,18 +63,16 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   @impl true
   def handle_info({:message_created, message}, socket) do
-    message_with_user = Repo.preload(message, [:user, :replies])
-    {:noreply, stream_insert(socket, :messages, message_with_user)}
+    message_with_user = Repo.preload(message, [:user, :replies, reactions: :user])
+    {:noreply, stream_insert(socket, :messages, Chat.to_stream_item(message_with_user))}
   end
 
   @impl true
   def handle_info({:reaction_added, %{id: message_id}}, socket) do
-    IO.puts("INSIDE BROADCAST FOR REACTION ADDED====")
-
     message_with_reaction =
       Repo.get!(Message, message_id) |> Repo.preload([:user, :reactions, replies: :user])
 
-    {:noreply, stream_insert(socket, :messages, message_with_reaction)}
+    {:noreply, stream_insert(socket, :messages, Chat.to_stream_item(message_with_reaction))}
   end
 
   @impl true
@@ -204,7 +202,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
 
   @impl true
   def handle_event("load_more_messages", _params, socket) do
-    IO.puts("Loading more messages...===============")
     channel_id = socket.assigns.channel.id
     cursor = socket.assigns.messages_cursor
 

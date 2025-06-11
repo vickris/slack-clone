@@ -82,8 +82,26 @@ defmodule SlackClone.Chat do
         last_msg -> last_msg.inserted_at
       end
 
-    {messages, next_cursor}
+    grouped =
+      messages
+      |> Enum.group_by(&NaiveDateTime.to_date(&1.inserted_at))
+
+    interleaved =
+      grouped
+      |> Enum.sort_by(fn {date, _} -> date end)
+      |> Enum.flat_map(fn {date, msgs} ->
+        [{:date, date}] ++ msgs
+      end)
+      |> Enum.map(fn
+        {:date, date} -> to_stream_item({:date, date})
+        msg -> to_stream_item(msg)
+      end)
+
+    {interleaved, next_cursor}
   end
+
+  def to_stream_item(%Message{} = msg), do: %{id: "msg-#{msg.id}", type: :message, message: msg}
+  def to_stream_item({:date, date}), do: %{id: "date-#{date}", type: :date, date: date}
 
   def add_reaction(user_id, message_id, emoji) do
     IO.puts("Adding reaction: #{emoji} to message ID: #{message_id} by user ID: #{user_id}")

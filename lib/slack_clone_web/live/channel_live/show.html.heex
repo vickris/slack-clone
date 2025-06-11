@@ -33,13 +33,20 @@
       phx-update="stream"
       phx-hook="InfinityScroll"
     >
-      <%= for {id, message} <- @streams.messages do %>
-        <.live_component
-          module={SlackCloneWeb.MessageComponent}
-          id={id}
-          message={message}
-          current_user_id={@current_user.id}
-        />
+      <%= for {_id, entry} <- @streams.messages do %>
+        <%= case entry.type do %>
+          <% :date -> %>
+            <div class="text-center text-sm text-gray-500 my-2">
+              {Calendar.strftime(entry.date, "%B %-d, %Y")}
+            </div>
+          <% :message -> %>
+            <.live_component
+              module={SlackCloneWeb.MessageComponent}
+              id={"message-#{entry.message.id}"}
+              message={entry.message}
+              current_user_id={@current_user.id}
+            />
+        <% end %>
       <% end %>
     </div>
     
