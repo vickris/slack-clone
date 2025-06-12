@@ -10,6 +10,12 @@ defmodule SlackClone.Chat do
     Repo.all(Channel)
   end
 
+  def create_reply(attrs) do
+    %Message{}
+    |> Message.changeset(attrs)
+    |> Repo.insert()
+  end
+
   def get_channel!(id) do
     Repo.get!(Channel, id)
   end

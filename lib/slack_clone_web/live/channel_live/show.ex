@@ -102,8 +102,6 @@ defmodule SlackCloneWeb.ChannelLive.Show do
          |> IO.inspect(label: "Socket after joining channel")
          |> put_flash(:info, "You have joined the channel.")}
 
-      #  |> push_patch(to: ~p"/channels/#{channel.id}")}
-
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Failed to join channel: #{reason}")}
     end

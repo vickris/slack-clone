@@ -36,7 +36,7 @@ Hooks.ClearInput = {
     console.log("Element has been mounted")
     this.el.addEventListener("submit", () => {
       setTimeout(() => {
-        const input = this.el.querySelector('input[name="content"]');
+        const input = this.el.querySelector('input');
         if (input) input.value = "";
       }, 0);
     });

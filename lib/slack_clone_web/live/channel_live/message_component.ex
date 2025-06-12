@@ -1,5 +1,6 @@
 defmodule SlackCloneWeb.MessageComponent do
   use Phoenix.LiveComponent
+  alias SlackClone.Chat
   @impl true
   def render(assigns) do
     ~H"""
@@ -62,6 +63,33 @@ defmodule SlackCloneWeb.MessageComponent do
                 {if @show_thread, do: "(Hide Thread)", else: "(Show Thread)"}
               </span>
             </button>
+            <%= if @show_thread do %>
+              <form
+                phx-submit="submit_reply"
+                phx-target={@myself}
+                class="mt-2 flex space-x-2"
+                autocomplete="off"
+                phx-hook="ClearInput"
+                id="Message#{@message.id}-reply-form"
+              >
+                <input
+                  id="Message#{@message.id}-reply-input"
+                  type="text"
+                  name="reply"
+                  value={@reply_input || ""}
+                  placeholder="Write a reply..."
+                  class="flex-1 border rounded px-2 py-1 text-sm"
+                  autocomplete="off"
+                />
+                <button
+                  type="submit"
+                  class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                  phx-target={@myself}
+                >
+                  Send
+                </button>
+              </form>
+            <% end %>
           </div>
           <%= if @show_thread do %>
             <.live_component
@@ -83,6 +111,7 @@ defmodule SlackCloneWeb.MessageComponent do
       |> assign(assigns)
       |> assign_new(:show_thread, fn -> false end)
       |> assign_new(:show_reaction_picker, fn -> false end)
+      |> assign_new(:reply_input, fn -> "" end)
 
     {:ok, socket}
   end
@@ -90,6 +119,26 @@ defmodule SlackCloneWeb.MessageComponent do
   @impl true
   def handle_event("show_reaction_picker", %{"message_id" => message_id}, socket) do
     {:noreply, assign(socket, show_reaction_picker: String.to_integer(message_id))}
+  end
+
+  @impl true
+  def handle_event("submit_reply", %{"reply" => reply_input}, socket) do
+    message_id = socket.assigns.message.id
+
+    if reply_input != "" do
+      IO.puts("Submitting reply: #{reply_input} for message ID: #{message_id}")
+
+      Chat.create_reply(%{
+        content: reply_input,
+        user_id: socket.assigns.current_user_id,
+        thread_id: message_id,
+        channel_id: socket.assigns.message.channel_id
+      })
+
+      {:noreply, assign(socket, reply_input: "", show_thread: true)}
+    else
+      {:noreply, assign(socket, reply_input: "")}
+    end
   end
 
   @impl true
