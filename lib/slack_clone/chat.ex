@@ -21,9 +21,8 @@ defmodule SlackClone.Chat do
     |> Repo.insert()
   end
 
-  def list_channels_for_user(user) do
-    user = Repo.preload(user, :channels)
-    user.channels
+  def list_channels() do
+    Repo.all(Channel)
   end
 
   def subscribe_to_channel_messages(channel_id) do
@@ -114,6 +113,12 @@ defmodule SlackClone.Chat do
 
   def remove_reaction(%Reaction{} = reaction) do
     Repo.delete(reaction)
+  end
+
+  def add_member(%SlackClone.Chat.Channel{id: channel_id}, %SlackClone.Accounts.User{id: user_id}) do
+    %SlackClone.Chat.ChannelMembership{}
+    |> SlackClone.Chat.ChannelMembership.changeset(%{channel_id: channel_id, user_id: user_id})
+    |> SlackClone.Repo.insert(on_conflict: :nothing)
   end
 
   def update_channel(%Channel{} = channel, attrs) do

@@ -57,6 +57,16 @@
             />
         <% end %>
       <% end %>
+      <%= unless @is_member do %>
+        <div class="flex justify-center mt-4">
+          <button
+            phx-click={JS.push("join_channel") |> JS.hide()}
+            class="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2 rounded-lg shadow transition-colors"
+          >
+            Join Channel
+          </button>
+        </div>
+      <% end %>
     </div>
     
 <!-- Replace everything from the form down (keep your messages container) -->

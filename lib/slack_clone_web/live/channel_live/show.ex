@@ -6,7 +6,7 @@ defmodule SlackCloneWeb.ChannelLive.Show do
   alias SlackClone.Repo
   alias SlackCloneWeb.Presence
 
-  @page_size 5
+  @page_size 10
 
   @impl true
   def mount(%{"id" => channel_id}, %{"user_token" => user_token}, socket) do
@@ -25,35 +25,29 @@ defmodule SlackCloneWeb.ChannelLive.Show do
         }
       )
 
-      presences = Presence.list("channel:#{channel_id}")
-
       Chat.subscribe_to_channel_messages(channel_id)
-
-      # Fetch paginated messages (most recent first)
-      {messages, next_cursor} = Chat.list_messages_paginated(channel_id, nil, @page_size)
-
-      socket =
-        socket
-        |> assign(:channel, channel)
-        |> assign(:presences, presences)
-        |> assign(:current_user, current_user)
-        |> assign(:messages_cursor, next_cursor)
-        |> stream_configure(:messages, dom_id: & &1.id)
-        |> stream(:messages, messages)
-        |> assign(:uploaded_files, [])
-        |> allow_upload(:avatar,
-          accept: ~w(.jpg .jpeg .png .pdf .doc .docx .xls .xlsx .txt),
-          max_entries: 3,
-          max_file_size: 10_000_000,
-          auto_upload: true,
-          external: &presign_upload/2,
-          progress: &handle_progress/3
-        )
-
-      {:ok, socket}
-    else
-      {:ok, redirect(socket, to: ~p"/channels")}
     end
+
+    {messages, _next_cursor} = Chat.list_messages_paginated(channel_id, nil, @page_size)
+    presences = Presence.list("channel:#{channel_id}")
+
+    {:ok,
+     socket
+     |> assign(:current_user, current_user)
+     |> assign(:channel, channel)
+     |> assign(:messages_cursor, nil)
+     |> assign(:messages, messages)
+     |> assign(:presences, presences)
+     |> assign(:is_member, authorized?(current_user, channel))
+     |> assign(:show_reaction_picker, nil)
+     |> stream(:messages, messages)
+     |> allow_upload(:avatar,
+       accept: ~w(.jpg .jpeg .png .gif),
+       max_entries: 1,
+       max_file_size: 5_000_000,
+       progress: &handle_progress/3,
+       presign: &presign_upload/2
+     )}
   end
 
   @impl true
@@ -81,6 +75,38 @@ defmodule SlackCloneWeb.ChannelLive.Show do
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:channel, Chat.get_channel!(id))}
+  end
+
+  @impl true
+  def handle_event("join_channel", _params, socket) do
+    current_user = socket.assigns.current_user
+    channel = socket.assigns.channel
+
+    case Chat.add_member(channel, current_user) do
+      {:ok, _member} ->
+        # Track the user in the channel presence
+        Presence.track(
+          self(),
+          "channel:#{channel.id}",
+          current_user.id,
+          %{
+            username: current_user.username,
+            user_id: current_user.id,
+            online_at: System.system_time(:second)
+          }
+        )
+
+        {:noreply,
+         socket
+         |> assign(:is_member, true)
+         |> IO.inspect(label: "Socket after joining channel")
+         |> put_flash(:info, "You have joined the channel.")}
+
+      #  |> push_patch(to: ~p"/channels/#{channel.id}")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to join channel: #{reason}")}
+    end
   end
 
   @impl true

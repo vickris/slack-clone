@@ -21,6 +21,7 @@ defmodule SlackCloneWeb.ChannelLive.FormComponent do
         phx-change="validate"
       >
         <.input field={@form[:name]} label="Channel Name" />
+        <.input field={@form[:description]} label="Description" />
 
         <:actions>
           <.button phx-disable-with="Saving...">Save Channel</.button>

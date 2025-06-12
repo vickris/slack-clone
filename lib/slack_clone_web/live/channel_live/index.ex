@@ -5,10 +5,9 @@ defmodule SlackCloneWeb.ChannelLive.Index do
   alias SlackClone.Chat.Channel
 
   @impl true
-  @spec mount(any(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(_params, %{"user_token" => user_token}, socket) do
     current_user = SlackClone.Accounts.get_user_by_session_token(user_token)
-    channels = Chat.list_channels_for_user(current_user)
+    channels = Chat.list_channels()
 
     {:ok,
      socket

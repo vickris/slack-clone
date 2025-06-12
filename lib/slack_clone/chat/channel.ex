@@ -15,7 +15,10 @@ defmodule SlackClone.Chat.Channel do
   def changeset(channel, attrs) do
     channel
     |> cast(attrs, [:name, :description, :creator_id])
-    |> validate_required([:name, :creator_id])
+    |> validate_required([:name, :creator_id, :description])
+    |> validate_length(:name, min: 1, max: 50)
+    |> validate_length(:description, max: 200)
+    |> foreign_key_constraint(:creator_id)
     |> unique_constraint(:name)
   end
 end
